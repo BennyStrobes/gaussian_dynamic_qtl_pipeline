@@ -8,11 +8,10 @@
 # Directory created by "time_step_independent_qtl_pipelines" scripts
 # Contains 1 file per sample with information on each test (variant, target region)
 # Each file (sample) has the same number of lines (tests)
-cht_input_file_dir="/project2/gilad/bstrober/ipsc_differentiation_19_lines/time_step_independent_qtl_pipelines/wasp/cht_input_files/"
+# cht_input_file_dir="/project2/gilad/bstrober/ipsc_differentiation_19_lines/time_step_independent_qtl_pipelines/wasp/cht_input_files/"
 
 # File containing all of the target regions we are using. We are using this file to convert from gene positions to ensable id
 target_region_input_file="/project2/gilad/bstrober/ipsc_differentiation_19_lines/time_step_independent_qtl_pipelines/wasp/target_regions/target_regions_cis_distance_50000_maf_cutoff_0.1_min_reads_100_min_as_reads_25_min_het_counts_5_merged.txt"
-
 
 # cell line specific pcs
 cell_line_specific_pc_file="/project2/gilad/bstrober/ipsc_differentiation_19_lines/preprocess/covariates/cell_line_ignore_missing_principal_components_9.txt"
@@ -24,9 +23,6 @@ total_expression_file="/project2/gilad/bstrober/ipsc_differentiation_19_lines/pr
 
 # Dosage-based genotypes for all samples
 genotype_file="/project2/gilad/bstrober/ipsc_differentiation_19_lines/preprocess/genotype/YRI_genotype.vcf"
-
-# Directory containing results for negative binomial dynamic qtl model
-nb_dynamic_qtl_dir="/project2/gilad/bstrober/ipsc_differentiation_19_lines/dynamic_qtl_pipelines/ipsc_data_te/qtl_results/"
 
 # File_name of per-time-step eqtl results (t=0)
 t_0_eqtl_results_file="/project2/gilad/bstrober/ipsc_differentiation_19_lines/time_step_independent_qtl_pipelines/wasp/cht_output/cht_results_cis_distance_50000_maf_cutoff_0.1_min_reads_100_min_as_reads_25_min_het_counts_5_num_pc_3_time_0_eqtl_results.txt"
@@ -44,7 +40,6 @@ time_step_independent_stem="/project2/gilad/bstrober/ipsc_differentiation_19_lin
 # Directory containing gsea data
 gsea_data_dir="/project2/gilad/bstrober/tools/tools/gsea/data/"
 
-
 # File containing conversions from ensamble ids to gene symbols
 gencode_file="/project2/gilad/bstrober/ipsc_differentiation_19_lines/preprocess_input_data/gencode.v19.annotation.gtf.gz"
 
@@ -53,7 +48,6 @@ gwas_catalog="/project2/gilad/bstrober/ipsc_differentiation_19_lines/preprocess_
 
 # Directory containing gtex gwas hits
 gtex_gwas_hits_dir="/project2/gilad/bstrober/ipsc_differentiation_19_lines/preprocess_input_data/gtex_gwas_data/"
-
 
 # File containing list of cardiomyopathy genes
 cardiomyopathy_gene_list="/project2/gilad/bstrober/ipsc_differentiation_19_lines/preprocess_input_data/cardiomyopathy_disease_genes/cardiomyopathy_genes.txt"
@@ -65,11 +59,10 @@ cardiomyopathy_gene_list="/project2/gilad/bstrober/ipsc_differentiation_19_lines
 ###############################################################################
 
 # Root directory for this of all ipsc data based results
-output_root="/project2/gilad/bstrober/ipsc_differentiation_19_lines/gaussian_dynamic_qtl_pipelines/"
+output_root="/project2/gilad/bstrober/ipsc_differentiation_19_lines/gaussian_dynamic_qtl_pipelines_v2/"
 
 # Directory containing necessary input files to qtl tests
 input_data_dir=$output_root"input_data/"
-
 
 # Directory containing text files with results from dynamic qtl analysis
 qtl_results_dir=$output_root"qtl_results/"
@@ -102,44 +95,40 @@ time_step_comparison_dir=$output_root"time_step_independent_comparison/"
 manuscript_figures_dir=$output_root"manuscript_figures/"
 
 
-###############################################################################
-# Dynamic QTL Calling
-###############################################################################
+
+
+
+
 
 
 ##########################################
-# Step 1: Create joint_test_input_file
+# Step 1: Preprocess data for dynamic eQTL calling
 ##########################################
-# joint_test_input_file is a table with 1 row per sample
-# each row has 3 columns:
-#### 1. Sample id
-#### 2. environmental variable
-#### 3. Absolute directory to CHT input file for that sample
-# NOTE: This script is very specific to our data
-# Takes less than a minute to run
-# $environmental_variable is a parameter that describes how we parameterize the environmental variable. So far, this is done with:
-### 1. 'time_steps': raw time format
+# prepare files necessary to run dynamic eQTL calling
+# Two files necessary for dynamic eQTL calling (and are created in this `preprocess_data_for_dynamic_eQTL_calling.sh`:
+###### 1. $joint_test_input_file: File with one line for each tested sample. Each line contains sample name, environmental variable, and first 8 cell line PCs for that sample
+###### 2. $dynamic_eqtl_input_file: File with one line for each variant-gene pair tested in dynamic eQTL analysis. Each line contains lists of expression, genotype, cell line PCs, and environmental variables across all tested samples
+# Note: Takes about 30 minutes to run
+
+# How to encode environmental variable:
+### 1. "time_steps": Encode environmental variable with samples day of differentiation
 environmental_variable_form="time_steps"
-joint_test_input_file=$input_data_dir"joint_test_input_file_"$environmental_variable_form".txt"
-if false; then
-python create_joint_test_input_file.py $cht_input_file_dir $joint_test_input_file $environmental_variable_form $pseudotime_predictions_3_file $pseudotime_predictions_4_file $pseudotime_predictions_5_file $cell_line_specific_pc_file
-fi
-
-
-
-##########################################
-# Step 2: Prepare input files for dynamic qtl calling
-##########################################
-# How to hanlde genotypes in the model. Options currently include:
-## 1. "round"
-## 2. "dosage"
+# How to encode genotype data
+### 1. "dosage": Use dosage based genotype values
+### 2. "round": Round dosage based genotype values to {0,1,2]}
 genotype_version="dosage"
 
-# Stem for all output files
-input_data_file=$input_data_dir"gaussian_dynamic_qtl_input_file_environmental_variable_"$environmental_variable_form"_genotype_version_"$genotype_version"_input.txt"
+# First output file fron this analysis
+joint_test_input_file=$input_data_dir"joint_test_input_file_"$environmental_variable_form".txt"
+# Second output file from this analysis
+dynamic_eqtl_input_file=$input_data_dir"gaussian_dynamic_qtl_input_file_environmental_variable_"$environmental_variable_form"_genotype_version_"$genotype_version"_input.txt"
+
 if false; then
-python prepare_gaussian_dynamic_qtl_input_files.py $joint_test_input_file $target_region_input_file $total_expression_file $genotype_file $genotype_version $input_data_file $environmental_variable_form
+sbatch preprocess_data_for_dynamic_eQTL_calling.sh $joint_test_input_file $dynamic_eqtl_input_file $total_expression_file $genotype_file $environmental_variable_form $genotype_version $cell_line_specific_pc_file $target_region_input_file
 fi
+
+
+
 
 ##########################################
 # Step 3: Run GLM/GLMM dynamic qtl modeling
