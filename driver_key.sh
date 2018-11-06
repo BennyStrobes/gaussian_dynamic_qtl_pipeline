@@ -130,42 +130,89 @@ fi
 
 
 
+
+
+
+
+
 ##########################################
-# Step 3: Run GLM/GLMM dynamic qtl modeling
+# Step 2: Run GLM/GLMM dynamic qtl modeling
 ##########################################
 
-#############################################################
-# Whether to run:
-### 1. 'glm'
-### 2. 'glmm'
-model_version="glmm"
-# Whether to include coviates or not
-#### 1. 'none'
-#### 2. 'pc1'
-#### 3. 'pc1_2'
-#### 4. 'pc1_3'
-#### 5. 'pc1_4'
-#### 6. 'pc1_5'
-covariate_method="none"
+##########################
+# Parameters
+##########################
+## 1. $model_version: Takes on "glm", "glm_quadratic", or "glmm"
+## 2. covariate_method: Takes on "none", "pc1", "pc1_2", "pc1_3", "pc1_4", "pc1_5"
+## 3. num_jobs: How many nodes to parallelize on  to parrallelize
+
+
 num_jobs="10"
 
+################################
+# Run Dynamic eQTLs using GLM with sweep over covariate methods
+covariate_methods=( "none" "pc1" "pc1_2" "pc1_3" "pc1_4" "pc1_5")
+model_version="glm"
+################################
+if false; then
+for covariate_method in "${covariate_methods[@]}"; do
+    echo $covariate_method
+    # Run for real data
+    permute="False"
+    for job_number in $(seq 0 $(($num_jobs-1))); do 
+        output_file=$qtl_results_dir"gaussian_dynamic_qtl_input_file_environmental_variable_"$environmental_variable_form"_genotype_version_"$genotype_version"_model_type_"$model_version"_covariate_method_"$covariate_method"_permute_"$permute"_results_"$job_number".txt"
+        sbatch run_gaussian_dynamic_qtl.sh $dynamic_eqtl_input_file $output_file $model_version $permute $covariate_method $job_number $num_jobs
+    done
+    # Run for permuted data
+    permute="True"
+    for job_number in $(seq 0 $(($num_jobs-1))); do 
+        output_file=$qtl_results_dir"gaussian_dynamic_qtl_input_file_environmental_variable_"$environmental_variable_form"_genotype_version_"$genotype_version"_model_type_"$model_version"_covariate_method_"$covariate_method"_permute_"$permute"_results_"$job_number".txt"
+        sbatch run_gaussian_dynamic_qtl.sh $dynamic_eqtl_input_file $output_file $model_version $permute $covariate_method $job_number $num_jobs
+    done
+done
+fi
+
+################################
+# Run Dynamic eQTLs using GLMM with 5 PCs
+covariate_method="pc1_5"
+model_version="glmm"
+################################
+# Run for real data
+if false; then
 permute="False"
-if false; then
 for job_number in $(seq 0 $(($num_jobs-1))); do 
     output_file=$qtl_results_dir"gaussian_dynamic_qtl_input_file_environmental_variable_"$environmental_variable_form"_genotype_version_"$genotype_version"_model_type_"$model_version"_covariate_method_"$covariate_method"_permute_"$permute"_results_"$job_number".txt"
-    sbatch run_gaussian_dynamic_qtl.sh $input_data_file $output_file $model_version $permute $covariate_method $job_number $num_jobs
+    sbatch run_gaussian_dynamic_qtl.sh $dynamic_eqtl_input_file $output_file $model_version $permute $covariate_method $job_number $num_jobs
 done
-fi
-
-
-
+# Run for permuted data
 permute="True"
-if false; then
 for job_number in $(seq 0 $(($num_jobs-1))); do 
     output_file=$qtl_results_dir"gaussian_dynamic_qtl_input_file_environmental_variable_"$environmental_variable_form"_genotype_version_"$genotype_version"_model_type_"$model_version"_covariate_method_"$covariate_method"_permute_"$permute"_results_"$job_number".txt"
-    sbatch run_gaussian_dynamic_qtl.sh $input_data_file $output_file $model_version $permute $covariate_method $job_number $num_jobs
+    sbatch run_gaussian_dynamic_qtl.sh $dynamic_eqtl_input_file $output_file $model_version $permute $covariate_method $job_number $num_jobs
 done
 fi
+
+################################
+# Run Dynamic eQTLs using GLM_quadratic with 5 PCs
+covariate_method="pc1_5"
+model_version="glm_quadratic"
+################################
+if false; then
+# Run for real data
+permute="False"
+for job_number in $(seq 0 $(($num_jobs-1))); do 
+    output_file=$qtl_results_dir"gaussian_dynamic_qtl_input_file_environmental_variable_"$environmental_variable_form"_genotype_version_"$genotype_version"_model_type_"$model_version"_covariate_method_"$covariate_method"_permute_"$permute"_results_"$job_number".txt"
+    sbatch run_gaussian_dynamic_qtl.sh $dynamic_eqtl_input_file $output_file $model_version $permute $covariate_method $job_number $num_jobs
+done
+# Run for permuted data
+permute="True"
+for job_number in $(seq 0 $(($num_jobs-1))); do 
+    output_file=$qtl_results_dir"gaussian_dynamic_qtl_input_file_environmental_variable_"$environmental_variable_form"_genotype_version_"$genotype_version"_model_type_"$model_version"_covariate_method_"$covariate_method"_permute_"$permute"_results_"$job_number".txt"
+    sbatch run_gaussian_dynamic_qtl.sh $dynamic_eqtl_input_file $output_file $model_version $permute $covariate_method $job_number $num_jobs
+done
+fi
+
+
 
 
 
